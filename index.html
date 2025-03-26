@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Data Sender</title>
+    <script type="module">
+        // Import Firebase SDK modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+
+        // Firebase Configuration (No API Key Needed for Anonymous Auth)
+        const firebaseConfig = {
+            authDomain: "heatwave-2025-default-rtdb.firebaseapp.com",
+            databaseURL: "https://heatwave-2025-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "heatwave-2025",
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const auth = getAuth();
+
+        // Sign in Anonymously
+        signInAnonymously(auth)
+            .then(() => console.log("Signed in anonymously"))
+            .catch((error) => console.error("Authentication Error: ", error));
+
+        function sendGPSData(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+
+            document.getElementById("lat").innerText = latitude;
+            document.getElementById("long").innerText = longitude;
+
+            // Send GPS data to Firebase
+            set(ref(database, "/gpsData"), {
+                latitude: latitude,
+                longitude: longitude,
+                timestamp: new Date().toISOString()
+            }).then(() => {
+                console.log("GPS Data Sent to Firebase");
+            }).catch(error => {
+                console.error("Error sending GPS data: ", error);
+            });
+        }
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(sendGPSData, error => {
+                    console.error("GPS Error: ", error);
+                });
+            } else {
+                console.error("Geolocation is not supported by this browser.");
+            }
+        }
+
+        // Send GPS data every 5 seconds
+        setInterval(getLocation, 5000);
+    </script>
+</head>
+<body>
+    <h2>GPS Data Sender</h2>
+    <p>Latitude: <span id="lat">Loading...</span></p>
+    <p>Longitude: <span id="long">Loading...</span></p>
+</body>
+</html>
