@@ -1,18 +1,18 @@
-<!DOCTYPE html>
+
+    <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GPS Data Sender</title>
     <script type="module">
-        // Import Firebase SDK modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+        import { getDatabase, ref, set, push } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
-        // Firebase Configuration (No API Key Needed for Anonymous Auth)
         const firebaseConfig = {
-            authDomain: "heatwave-2025-default-rtdb.firebaseapp.com",
+            apiKey: "YOUR_API_KEY",
+            authDomain: "heatwave-2025.firebaseapp.com",
             databaseURL: "https://heatwave-2025-default-rtdb.asia-southeast1.firebasedatabase.app/",
             projectId: "heatwave-2025",
         };
@@ -25,7 +25,7 @@
         // Sign in Anonymously
         signInAnonymously(auth)
             .then(() => console.log("Signed in anonymously"))
-            .catch((error) => console.error("Authentication Error: ", error));
+            .catch(error => console.error("Authentication Error: ", error));
 
         function sendGPSData(position) {
             const latitude = position.coords.latitude;
@@ -35,9 +35,9 @@
             document.getElementById("long").innerText = longitude;
 
             // Send GPS data to Firebase
-            set(ref(database, "/gpsData"), {
-                latitude: latitude,
-                longitude: longitude,
+            push(ref(database, "/gpsData"), {
+                latitude,
+                longitude,
                 timestamp: new Date().toISOString()
             }).then(() => {
                 console.log("GPS Data Sent to Firebase");
@@ -46,23 +46,45 @@
             });
         }
 
-        function getLocation() {
+        function showError(error) {
+            let errorMsg = "";
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMsg = "User denied the request for Geolocation.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMsg = "Location information is unavailable.";
+                    break;
+                case error.TIMEOUT:
+                    errorMsg = "The request to get user location timed out.";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    errorMsg = "An unknown error occurred.";
+                    break;
+            }
+            console.error("GPS Error: ", errorMsg);
+            document.getElementById("lat").innerText = "Error";
+            document.getElementById("long").innerText = errorMsg;
+        }
+
+        function startTracking() {
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(sendGPSData, error => {
-                    console.error("GPS Error: ", error);
+                navigator.geolocation.watchPosition(sendGPSData, showError, {
+                    enableHighAccuracy: true,
+                    maximumAge: 0
                 });
             } else {
                 console.error("Geolocation is not supported by this browser.");
             }
         }
 
-        // Send GPS data every 5 seconds
-        setInterval(getLocation, 5000);
+        // Start tracking GPS on page load
+        window.onload = startTracking;
     </script>
 </head>
 <body>
     <h2>GPS Data Sender</h2>
-    <p>Latitude: <span id="lat">Loading...</span></p>
-    <p>Longitude: <span id="long">Loading...</span></p>
+    <p>Latitude: <span id="lat">Waiting...</span></p>
+    <p>Longitude: <span id="long">Waiting...</span></p>
 </body>
 </html>
